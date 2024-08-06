@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# Function to print messages in color
+print_message() {
+    local color_code="$1"
+    local message="$2"
+    echo -e "\e[${color_code}m${message}\e[0m"
+}
+
+# Function to print headers
+print_header() {
+    print_message "1;34" "$1"
+}
+
+# Function to print success messages
+print_success() {
+    print_message "1;32" "$1"
+}
+
+# Function to print error messages
+print_error() {
+    print_message "1;31" "$1"
+}
+
+# Function to install a package if not already installed
+install_package() {
+    local package="$1"
+    if dpkg -l | grep -qw "$package"; then
+        print_success "$package is already installed."
+    else
+        print_message "1;33" "Installing $package..."
+        sudo apt-get install -y "$package"
+        if [ $? -eq 0 ]; then
+            print_success "$package installation completed."
+        else
+            print_error "Failed to install $package."
+            exit 1
+        fi
+    fi
+}
+
+# Update package list
+print_header "Updating package list..."
+sudo apt-get update
+if [ $? -ne 0 ]; then
+    print_error "Failed to update package list."
+    exit 1
+fi
+
+# Install Git
+install_package "git"
+
+# Install Python 3.8 (or Python 3.9)
+print_header "Installing Python 3.8..."
+install_package "python3.8"
+
+# Install the latest version of JDK
+print_header "Installing JDK..."
+install_package "default-jdk"
+
+# Install required dependencies
+dependencies=("python3-dev" "python3-venv" "python3-pip" "build-essential" "libffi-dev" "libssl-dev" "libxml2-dev" "libxslt1-dev" "libjpeg62-turbo-dev" "zlib1g-dev" "wkhtmltopdf")
+print_header "Installing dependencies..."
+for dep in "${dependencies[@]}"; do
+    install_package "$dep"
+done
+
+# Clone MobSF repository
+print_header "Cloning MobSF repository..."
+git clone https://github.com/MobSF/Mobile-Security-Framework-MobSF.git
+if [ $? -ne 0 ]; then
+    print_error "Failed to clone MobSF repository."
+    exit 1
+fi
+
+# Change directory to MobSF
+cd Mobile-Security-Framework-MobSF || { print_error "Failed to change directory to MobSF."; exit 1; }
+
+# Setup MobSF
+print_header "Setting up MobSF..."
+sudo ./setup.sh
+if [ $? -ne 0 ]; then
+    print_error "MobSF setup failed."
+    exit 1
+fi
+
+# Print success message
+print_success "MobSF setup completed successfully."
+
+# Provide command to run MobSF
+print_header "You can now start MobSF with the following command:"
+print_message "1;36" "./run.sh 127.0.0.1:8000"
+
+# Provide URL to access MobSF
+print_header "Access the MobSF web interface at:"
+print_message "1;36" "http://127.0.0.1:8000"
+
+
